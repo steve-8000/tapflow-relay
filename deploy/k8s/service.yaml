@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tapflow-relay
+spec:
+  selector:
+    app: tapflow-relay
+  ports:
+    - port: 80
+      targetPort: 4000

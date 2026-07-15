@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: tapflow-relay
+  labels:
+    app: tapflow-relay
+spec:
+  serviceName: tapflow-relay
+  replicas: 1 # SQLite single-writer (relay data dir) — never scale this.
+  selector:
+    matchLabels:
+      app: tapflow-relay
+  template:
+    metadata:
+      labels:
+        app: tapflow-relay
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      containers:
+        - name: tapflow-relay
+          image: ghcr.io/steve-8000/tapflow-relay:latest
+          imagePullPolicy: Always
+          envFrom:
+            - secretRef:
+                name: tapflow-env
+          ports:
+            - containerPort: 4000
+              name: http
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 1
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 4000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 4000
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          volumeMounts:
+            - name: tapflow-data
+              mountPath: /app/.tapflow-data
+  volumeClaimTemplates:
+    - metadata:
+        name: tapflow-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 5Gi
