@@ -13,6 +13,21 @@
 
 relay는 대시보드/API/DB만 제공한다. 실제 iOS Simulator를 구동하는 **Mac agent는 macOS + Xcode 필수**이므로 clab-cluster(Linux 노드)에는 올릴 수 없다. Mac에서 `tapflow agent start --relay wss://ios.clab.one --token <agent-PAT>`로 별도 실행한다.
 
+## 시뮬레이터 구성 & 기기 배정 컨벤션
+
+연결된 Mac에는 시뮬레이터 2대만 유지한다(그 외 posy 프로젝트 전용 `Posy Reference SE 3 QA` 제외):
+
+| 기기 | UUID | 용도 |
+|---|---|---|
+| iPhone 17 Pro (iOS 26.5) | `8614C140-C044-40C2-9747-351582A99A4D` | **MCP 자동화 전용** |
+| iPhone 17 (iOS 26.5) | `D043EE5F-3CD9-477F-AC0A-A98D48EBDA10` | **대시보드 수동 리뷰 전용** |
+
+relay는 대시보드 로그인 쿠키와 MCP의 PAT(agent 스코프가 아닌 PAT)를 똑같이 `role: browser`로 분류한다(`classifyConnection`, `lib/connectionAuth.js`) — 즉 기기 세션 락(`busy`)은 계정이 아니라 **기기당 browser-role 연결 1개** 단위다. 같은 기기를 대시보드와 MCP가 동시에 잡으면 서로 "in use"로 충돌한다. 위 배정을 지키면 겹치지 않는다.
+
+`@tapflowio/mcp-server`는 기기를 코드로 강제 고정하는 기능이 없다(모든 툴이 매 호출마다 `sessionId`를 인자로 받음) — 컨벤션은 MCP를 호출하는 쪽(에이전트)이 항상 iPhone 17 Pro의 sessionId를 골라 `connect_device`하는 방식으로 지킨다.
+
+세션이 정상 종료 없이 끊겨 `busy: true`로 고정되는 경우, relay 재시작(`kubectl rollout restart statefulset/tapflow-relay -n tapflow`)으로 정리한다(세션 상태는 SQLite가 아니라 relay 메모리에만 있음).
+
 ## 필요 시크릿 (git 미관리, kubectl로 직접 적용)
 
 - `ghcr-pull-secret` — private GHCR pull (다른 steve-8000 앱과 동일).
