@@ -35,6 +35,8 @@ relay는 대시보드 로그인 쿠키와 MCP의 PAT(agent 스코프가 아닌 P
 
 세션이 정상 종료 없이 끊겨 `busy: true`로 고정되는 경우, relay 재시작(`kubectl rollout restart statefulset/tapflow-relay -n tapflow`)으로 정리한다(세션 상태는 SQLite가 아니라 relay 메모리에만 있음).
 
+**install_app/launch_app/screenshot 주의**: `@tapflowio/ios-agent`(v0.14.0 확인)는 이 세 작업을 세션별 deviceId가 아니라 `xcrun simctl <verb> booted`(암묵적 대상)로 실행한다 — `touch`/`key`/`rotate`/`open-url`은 세션별로 정상 스코프되지만 이 셋은 아니다. 두 시뮬레이터가 동시에 부팅 중이면 어느 쪽이 "booted"로 잡힐지 불확실하므로, install/launch/screenshot이 필요한 작업은 **의도한 기기 하나만 부팅한 상태**에서 실행할 것. (자동 미러링/자동 단일부팅 강제는 시도했다가 부작용이 커서 제거함 — 필요해지면 이 제약을 고려해 다시 설계할 것.)
+
 ## 필요 시크릿 (git 미관리, kubectl로 직접 적용)
 
 - `ghcr-pull-secret` — private GHCR pull (다른 steve-8000 앱과 동일).
