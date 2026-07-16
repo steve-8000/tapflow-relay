@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tapflow-relay-agent
+  annotations:
+    # Direct LAN path for the macOS agent (see tapflow's own self-hosting docs:
+    # "the agent→relay path always uses LAN ws://"). Bypasses traefik/TLS so the
+    # continuous 30fps binary video stream doesn't fight the reverse proxy's
+    # buffering — that combo caused a 1s reconnect loop when the ingress path
+    # was used for the agent's control+stream socket. Browsers keep using the
+    # ClusterIP Service behind ios.clab.one; only the Mac agent points here.
+    tapflow.clab.one/purpose: agent-direct-lan
+spec:
+  type: NodePort
+  selector:
+    app: tapflow-relay
+  ports:
+    - port: 4000
+      targetPort: 4000
+      nodePort: 30400

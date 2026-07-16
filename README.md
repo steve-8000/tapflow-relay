@@ -5,13 +5,20 @@
 ## 구성
 
 - `deploy/k8s/statefulset.yaml` — relay StatefulSet (replica=1, SQLite 단일 writer 제약 — 절대 스케일하지 않음). `/app/.tapflow-data`에 PVC(`local-path`, 5Gi) 마운트 — 세션 DB, 빌드 업로드, 녹화본(72h 자동 만료) 저장.
-- `deploy/k8s/service.yaml` — ClusterIP :80 → :4000.
-- `deploy/k8s/ingress.yaml` — `ios.clab.one`, traefik + cert-manager(letsencrypt-prod).
+- `deploy/k8s/service.yaml` — ClusterIP :80 → :4000. 브라우저(대시보드)는 이걸 통해 `ios.clab.one` ingress로 접근.
+- `deploy/k8s/service-agent-nodeport.yaml` — NodePort `30400` → :4000. **Mac agent 전용 직결 경로.** tapflow 공식 가이드가 "agent→relay는 LAN `ws://` 직결" 권장 — agent를 대시보드와 같은 public ingress(`wss://ios.clab.one`, traefik+TLS)로 물렸더니 30fps 비디오 스트림 시작 직후 1초 간격 재연결 루프가 발생했음(리버스프록시가 지속 바이너리 스트림과 안 맞음). NodePort로 traefik/TLS를 완전히 우회해서 해결.
+- `deploy/k8s/ingress.yaml` — `ios.clab.one`, traefik + cert-manager(letsencrypt-prod). **브라우저 전용 — agent는 여기로 연결하지 않는다.**
 - 이미지: `ghcr.io/steve-8000/tapflow-relay:latest` — [jo-duchan/tapflow](https://github.com/jo-duchan/tapflow)의 공식 `Dockerfile`을 그대로 빌드(공식 배포 이미지가 없어 자체 빌드/게시), linux/amd64.
 
 ## 클러스터에 없는 것
 
-relay는 대시보드/API/DB만 제공한다. 실제 iOS Simulator를 구동하는 **Mac agent는 macOS + Xcode 필수**이므로 clab-cluster(Linux 노드)에는 올릴 수 없다. Mac에서 `tapflow agent start --relay wss://ios.clab.one --token <agent-PAT>`로 별도 실행한다.
+relay는 대시보드/API/DB만 제공한다. 실제 iOS Simulator를 구동하는 **Mac agent는 macOS + Xcode 필수**이므로 clab-cluster(Linux 노드)에는 올릴 수 없다. Mac에서 아래처럼 별도 실행한다:
+
+```sh
+tapflow agent start --relay ws://219.255.103.189:30400 --token <agent-PAT>
+```
+
+`wss://ios.clab.one`(ingress)이 아니라 **NodePort 직결**(`ws://<node-ip>:30400`)을 반드시 써야 한다 — 위 서비스 구성 이유 참고.
 
 ## 시뮬레이터 구성 & 기기 배정 컨벤션
 

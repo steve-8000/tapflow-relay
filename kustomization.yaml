@@ -5,4 +5,5 @@ namespace: tapflow
 resources:
   - deploy/k8s/statefulset.yaml
   - deploy/k8s/service.yaml
+  - deploy/k8s/service-agent-nodeport.yaml
   - deploy/k8s/ingress.yaml
